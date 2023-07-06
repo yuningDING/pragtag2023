@@ -8,9 +8,31 @@ from sklearn.metrics import (accuracy_score, f1_score, recall_score, confusion_m
 from torch.utils.data import Dataset
 from tqdm import tqdm
 from transformers import RobertaTokenizer, RobertaModel, AutoConfig, AutoModel, BertTokenizer, BertModel, logging
+import string
+import re
 
 np.set_printoptions(threshold=10_000)
 logging.set_verbosity_error()
+
+KEEP_LIST = open("../data/keep_words.txt", "r", encoding='utf-8').read().split("\n")
+
+
+def get_terminology_replaced(dataframe):
+    #print(KEEP_LIST)
+    for index, row in dataframe.iterrows():
+        text = row['text']
+        new_text = ''
+        for t in text.split():
+            if t.lower().strip(string.punctuation) not in KEEP_LIST:
+                t = '<term>'
+                if 'http' in t:
+                    t = '<link>'
+                elif re.search('[a-z]', t) is None:
+                    t = '<non_letter>'
+            new_text = new_text+' '+t
+        row['text'] = new_text.strip()
+    return dataframe
+
 
 def seed_everything(seed):
     np.random.seed(seed)

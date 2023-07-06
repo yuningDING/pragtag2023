@@ -80,4 +80,7 @@ def split_train_validate(json_df):
     return train, validation
 
 
-all = pd.read_json('train.json')
+train = pd.read_json('train_inputs_full.json')
+get_txt(train, 'all')
+test = pd.read_json('test_inputs_final.json')
+get_txt(test, 'all')
