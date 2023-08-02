@@ -13,6 +13,11 @@ Then run `python3 data/analyze_domains.py` to build the index of which of the re
 
 ### Experiments
 
+#### 'Limited Data' Setting
+
+To run a similarity-based model, splitting the data once, execute `python3 experiment/low_data_similarity.py`.
+To train four separate models on different splits of the training data run `python3 experiment/low_data_similarity_folds.py`.
+
 #### 'No Data' Setting
 
 For the similarity-based experiments, run `python3 experiment/no_data_similarity.py` to obtain results for both our internal data split as well as predictions on the challenge test data.
