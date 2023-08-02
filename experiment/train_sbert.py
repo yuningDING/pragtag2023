@@ -9,6 +9,9 @@ import sys
 from scipy import spatial
 import shutil
 import logging
+from load import load_prediction_and_gold
+from eval import eval_across_domains
+from utils import get_data, get_test_data, write_submission
 from tqdm import tqdm
 
 def get_train_examples_limited(df_train, respect_domains=True, domain_col='domain', id_column='id', target_column='label', answer_column='text', max_num_samples=10000):
@@ -287,3 +290,39 @@ def train_sbert(run_path, df_train, df_test, df_val, answer_column="text", targe
         return eval_sbert_within_domain(run_path=run_path, df_test=df_test, df_ref=df_ref, id_column=id_column, answer_column=answer_column, target_column=target_column)
     else:
         return eval_sbert(run_path=run_path, df_test=df_test, df_ref=df_ref, id_column=id_column, answer_column=answer_column, target_column=target_column)
+    
+
+def train_and_eval_sbert(train_path, val_path, test_path, prompt, target_folder='results'):
+
+    if not os.path.exists(target_folder):
+        os.mkdir(target_folder)
+
+    df_train = get_data(train_path)
+    df_val = get_data(val_path)
+    df_test = get_test_data(test_path)
+
+    prompt_ours = prompt + '_ours'
+    prompt_test = prompt + '_test_data'
+
+    train_sbert(run_path=target_folder + '/' + prompt_ours, df_train=df_train, df_test=df_val, df_val=df_val, answer_column="sentence", target_column="label", id_column="sent_id", base_model="all-MiniLM-L12-v2", num_pairs_per_example=None, save_model=True, num_epochs=10, batch_size=8, do_warmup=True, respect_domains=True)
+    model = SentenceTransformer(os.path.join(target_folder, prompt_ours, 'finetuned_model'))
+
+    df_train['embedding'] = df_train['sentence'].apply(model.encode)
+    df_val['embedding'] = df_val['sentence'].apply(model.encode)
+    df_test['embedding'] = df_test['sentence'].apply(model.encode)
+
+    # Predict on our split
+    eval_sbert_within_domain(run_path=os.path.join(target_folder, prompt_ours), df_test=df_val, df_ref=df_train, id_column='sent_id', answer_column='sentence', target_column='label')
+    write_submission(os.path.join(target_folder, prompt_ours, 'predictions_sim.csv'), val_path, os.path.join(target_folder, prompt_ours, 'predicted_our_split.json'))
+    # Predict on challenge test data
+    eval_sbert_within_domain(run_path=os.path.join(target_folder, prompt_test), df_test=df_test, df_ref=df_train, id_column='sent_id', answer_column='sentence', target_column='label')
+    write_submission(os.path.join(target_folder, prompt_test, 'predictions_sim.csv'), test_path, os.path.join(target_folder, prompt_test, 'predicted.json'))
+
+    ## Calculate metrics for the internal split
+    pred, gold = load_prediction_and_gold(os.path.join(target_folder, prompt_ours, 'predicted_our_split.json'), val_path)
+    per_domain, mean = eval_across_domains(gold, pred)
+
+    with open(os.path.join(target_folder, prompt_ours, 'scores.txt'), "w+") as f:
+        for k, v in per_domain.items():
+            f.write(f"f1_{k}:{v}\n")
+        f.write(f"f1_mean:{mean}")
