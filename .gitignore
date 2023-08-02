@@ -1,0 +1,6 @@
+results/
+venv/
+__pycache__
+data/gateways
+data/our_split/*.json
+data/*.json
