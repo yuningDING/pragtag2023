@@ -3,4 +3,5 @@ venv/
 __pycache__
 data/gateways
 data/our_split/*.json
+data/our_split/*.csv
 data/*.json
