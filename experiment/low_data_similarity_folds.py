@@ -4,8 +4,11 @@ import os
 from utils import get_data
 import pandas as pd
 import random
-from train_sbert import train_sbert
+from train_sbert import train_sbert, eval_sbert_within_domain
 import copy
+from write_eval_stats_compare_within import evaluate, evaluate_from_df
+
+num_folds = 4
 
 data_path = 'data/train_inputs_low.json'
 target_folder = 'results/low_data_similarity_folds/'
@@ -36,7 +39,7 @@ for review, df in df_data.groupby('pid'):
 
 
 #for each domain, take one as testing
-for i in range(1):
+for i in range(num_folds):
 
     df_train = pd.DataFrame()
     df_test = pd.DataFrame()
@@ -50,8 +53,7 @@ for i in range(1):
 
         df_train = pd.concat([df_train, get_pids(domain_reviews, df_data)])
         df_test = pd.concat([df_test, get_pids(test_review, df_data)])
-
-
+        
     print(len(df_data))
     print(len(df_train))
     print(len(df_test))
@@ -62,7 +64,28 @@ for i in range(1):
 
     train_sbert(run_path=os.path.join(target_folder, prompt), df_train=df_train, df_test=df_test, df_val=df_test, answer_column="sentence", target_column="label", id_column="sent_id", base_model="all-MiniLM-L12-v2", num_pairs_per_example=None, save_model=True, num_epochs=10, batch_size=8, do_warmup=True, respect_domains=True)
 
+    # Evaluate this split
+    evaluate(model_path=os.path.join(target_folder, prompt), df_train=df_train, df_test=df_test)
 
+
+df_preds = pd.DataFrame()
+
+# Evaluate union of all splits
+for i in range(num_folds):
+
+    # Concat all folds together
+    df_preds_fold = pd.read_csv('results/low_data_similarity_folds/fold_' + str(i) + '/predictions_sim.csv')
+
+    df_preds = pd.concat([df_preds, df_preds_fold])
+
+evaluate_from_df(target_folder=os.path.join(target_folder), df_pred=df_preds, suffix='overall')
+evaluate_from_df(target_folder=os.path.join(target_folder), df_pred=df_preds[df_preds['domain'] == 'case'], suffix='case')
+evaluate_from_df(target_folder=os.path.join(target_folder), df_pred=df_preds[df_preds['domain'] == 'diso'], suffix='diso')
+evaluate_from_df(target_folder=os.path.join(target_folder), df_pred=df_preds[df_preds['domain'] == 'iscb'], suffix='iscb')
+evaluate_from_df(target_folder=os.path.join(target_folder), df_pred=df_preds[df_preds['domain'] == 'rpkg'], suffix='rpkg')
+evaluate_from_df(target_folder=os.path.join(target_folder), df_pred=df_preds[df_preds['domain'] == 'scip'], suffix='scip')
+    
+    
 
 
 

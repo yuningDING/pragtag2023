@@ -106,7 +106,7 @@ def get_val_examples(df_train, df_val, respect_domains=True, domain_col='domain'
     return val_examples
 
 
-def eval_sbert_within_domain(run_path, df_test, df_ref, id_column, answer_column, target_column):
+def eval_sbert_within_domain(run_path, df_test, df_ref, id_column, answer_column, target_column, save=True):
 
     max_predictions = []
     avg_predictions = []
@@ -154,18 +154,22 @@ def eval_sbert_within_domain(run_path, df_test, df_ref, id_column, answer_column
             max_predictions.append(max_pred)
             avg_predictions.append(avg_pred)
 
-            predictions[predictions_index] = {"id": test_answer[id_column], "pred_avg": avg_pred, "sim_score_avg": avg_sim,"pred_max": max_pred, "sim_score_max": max_sim, "most_similar_answer_id": max_sim_id, "most_similar_answer_text": max_sim_answer}
+            predictions[predictions_index] = {id_column: test_answer[id_column], "pred_avg": avg_pred, "sim_score_avg": avg_sim,"pred_max": max_pred, "sim_score_max": max_sim, "most_similar_answer_id": max_sim_id, "most_similar_answer_text": max_sim_answer}
             predictions_index += 1
 
     copy_test = df_test.copy()
     df_predictions = pd.DataFrame.from_dict(predictions, orient='index')
-    df_predictions = pd.merge(copy_test, df_predictions, left_on=id_column, right_on="id")
-    df_predictions.to_csv(os.path.join(run_path, "predictions_sim.csv"), index=None)
+    df_predictions = pd.merge(copy_test, df_predictions, left_on=id_column, right_on=id_column)
 
-    return max_predictions, avg_predictions
+    if save:
+        df_predictions.to_csv(os.path.join(run_path, "predictions_sim.csv"), index=None)
+        return max_predictions, avg_predictions
+    
+    else:
+        return df_predictions
 
     
-def eval_sbert(run_path, df_test, df_ref, id_column, answer_column, target_column):
+def eval_sbert(run_path, df_test, df_ref, id_column, answer_column, target_column, save=True):
 
     max_predictions = []
     avg_predictions = []
@@ -208,15 +212,19 @@ def eval_sbert(run_path, df_test, df_ref, id_column, answer_column, target_colum
         max_predictions.append(max_pred)
         avg_predictions.append(avg_pred)
 
-        predictions[predictions_index] = {"id": test_answer[id_column], "pred_avg": avg_pred, "sim_score_avg": avg_sim,"pred_max": max_pred, "sim_score_max": max_sim, "most_similar_answer_id": max_sim_id, "most_similar_answer_text": max_sim_answer}
+        predictions[predictions_index] = {id_column: test_answer[id_column], "pred_avg": avg_pred, "sim_score_avg": avg_sim,"pred_max": max_pred, "sim_score_max": max_sim, "most_similar_answer_id": max_sim_id, "most_similar_answer_text": max_sim_answer}
         predictions_index += 1
 
     copy_test = df_test.copy()
     df_predictions = pd.DataFrame.from_dict(predictions, orient='index')
-    df_predictions = pd.merge(copy_test, df_predictions, left_on=id_column, right_on="id")
-    df_predictions.to_csv(os.path.join(run_path, "predictions_sim.csv"), index=None)
+    df_predictions = pd.merge(copy_test, df_predictions, left_on=id_column, right_on=id_column)
 
-    return max_predictions, avg_predictions
+    if save:
+        df_predictions.to_csv(os.path.join(run_path, "predictions_sim.csv"), index=None)
+        return max_predictions, avg_predictions
+    
+    else:
+        return df_predictions
 
 
 # For larger amounts of training data: Do not create all possible pairs, but limit to a fixed number per epoch (if possible, have different pairs across different epochs)
@@ -292,30 +300,38 @@ def train_sbert(run_path, df_train, df_test, df_val, answer_column="text", targe
         return eval_sbert(run_path=run_path, df_test=df_test, df_ref=df_ref, id_column=id_column, answer_column=answer_column, target_column=target_column)
     
 
-def train_and_eval_sbert(train_path, val_path, test_path, prompt, target_folder='results'):
+def train_and_eval_sbert(train_path, val_path, test_path, prompt, target_folder='results', bs=8, epochs=10, model="all-MiniLM-L12-v2", respect_domains=True):
 
     if not os.path.exists(target_folder):
         os.mkdir(target_folder)
 
-    df_train = get_data(train_path)
-    df_val = get_data(val_path)
-    df_test = get_test_data(test_path)
+    df_train = get_data(train_path, 'ALL')
+    df_val = get_data(val_path, 'ALL')
+    df_test = get_test_data(test_path, 'ALL')
 
     prompt_ours = prompt + '_ours'
     prompt_test = prompt + '_test_data'
 
-    train_sbert(run_path=target_folder + '/' + prompt_ours, df_train=df_train, df_test=df_val, df_val=df_val, answer_column="sentence", target_column="label", id_column="sent_id", base_model="all-MiniLM-L12-v2", num_pairs_per_example=None, save_model=True, num_epochs=10, batch_size=8, do_warmup=True, respect_domains=True)
+    # train_sbert(run_path=target_folder + '/' + prompt_ours, df_train=df_train, df_test=df_val, df_val=df_val, answer_column="sentence", target_column="label", id_column="sent_id", base_model=model, num_pairs_per_example=None, save_model=True, num_epochs=epochs, batch_size=bs, do_warmup=True, respect_domains=respect_domains)
     model = SentenceTransformer(os.path.join(target_folder, prompt_ours, 'finetuned_model'))
 
     df_train['embedding'] = df_train['sentence'].apply(model.encode)
     df_val['embedding'] = df_val['sentence'].apply(model.encode)
     df_test['embedding'] = df_test['sentence'].apply(model.encode)
 
+    target_folder = 'results_cross'
+
+    if not os.path.exists(os.path.join(target_folder, prompt_ours)):
+        os.mkdir(os.path.join(target_folder, prompt_ours))
     # Predict on our split
-    eval_sbert_within_domain(run_path=os.path.join(target_folder, prompt_ours), df_test=df_val, df_ref=df_train, id_column='sent_id', answer_column='sentence', target_column='label')
+    # eval_sbert_within_domain(run_path=os.path.join(target_folder, prompt_ours), df_test=df_val, df_ref=df_train, id_column='sent_id', answer_column='sentence', target_column='label')
+    eval_sbert(run_path=os.path.join(target_folder, prompt_ours), df_test=df_val, df_ref=df_train, id_column='sent_id', answer_column='sentence', target_column='label')
     write_submission(os.path.join(target_folder, prompt_ours, 'predictions_sim.csv'), val_path, os.path.join(target_folder, prompt_ours, 'predicted_our_split.json'))
     # Predict on challenge test data
-    eval_sbert_within_domain(run_path=os.path.join(target_folder, prompt_test), df_test=df_test, df_ref=df_train, id_column='sent_id', answer_column='sentence', target_column='label')
+    if not os.path.exists(os.path.join(target_folder, prompt_test)):
+        os.mkdir(os.path.join(target_folder, prompt_test))
+    # eval_sbert_within_domain(run_path=os.path.join(target_folder, prompt_test), df_test=df_test, df_ref=df_train, id_column='sent_id', answer_column='sentence', target_column='label')
+    eval_sbert(run_path=os.path.join(target_folder, prompt_test), df_test=df_test, df_ref=df_train, id_column='sent_id', answer_column='sentence', target_column='label')
     write_submission(os.path.join(target_folder, prompt_test, 'predictions_sim.csv'), test_path, os.path.join(target_folder, prompt_test, 'predicted.json'))
 
     ## Calculate metrics for the internal split
