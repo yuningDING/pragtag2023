@@ -46,9 +46,9 @@ def json_to_sequence_tagging_dataframe(json_df, test=False):
                 prediction_string.append(' '.join([str(x) for x in token_indexes]))
 
     if test is False:
-        csv_df = pd.DataFrame(list(zip(essay_id, domain, label, text, prediction_string)), columns=['essay_id', 'domain', 'label', 'text', 'prediction_string'])
+        csv_df = pd.DataFrame(list(zip(sentence_id, essay_id, domain, label, text, prediction_string)), columns=['sentence_id','essay_id', 'domain', 'label', 'text', 'prediction_string'])
     else:
-        csv_df = pd.DataFrame(list(zip(essay_id, domain, text, sentence_id)), columns=['essay_id', 'domain', 'text', 'sentence_id'])
+        csv_df = pd.DataFrame(list(zip(sentence_id, essay_id, domain, text)), columns=['sentence_id', 'essay_id', 'domain', 'text'])
 
     return csv_df
 
@@ -90,13 +90,13 @@ def ner(df_texts, df_train):
     return df_texts
 
 
-def preprocess(json_df, txt_folder, test=False):
+def preprocess(df_gold, txt_folder, test=False):
     df_texts = agg_essays(txt_folder)
     if test:
-        df_gold = json_to_sequence_tagging_dataframe(json_df, True)
+        #df_gold = json_to_sequence_tagging_dataframe(json_df, True)
         df_texts = df_texts[df_texts['essay_id'].isin(set(df_gold['essay_id'].unique()))].reset_index()
     else:
-        df_gold = json_to_sequence_tagging_dataframe(json_df)
+        #df_gold = json_to_sequence_tagging_dataframe(json_df)
         df_texts = df_texts[df_texts['essay_id'].isin(set(df_gold['essay_id'].unique()))].reset_index()
         df_texts = ner(df_texts, df_gold)
     return df_texts, df_gold
