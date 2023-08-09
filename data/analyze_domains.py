@@ -5,7 +5,7 @@ import sys
 from nltk.probability import FreqDist
 from pathlib import Path
 
-aux_data_path = '/Users/mariebexte/Coding/Datasets/PragTag/requestitem_export_09ebbebb-8b76-40c3-b2a5-03533ea6d7c0/auxiliary_data/F1000-22/data'
+aux_data_path = 'data/F1000-22/data'
 types = set()
 gw_list = []
 gateway_dir = 'gateways'

@@ -7,6 +7,7 @@ from tqdm import tqdm
 from scipy import spatial
 from glob import glob
 from utils import get_data
+from write_eval_stats_compare_within import evaluate_from_df
 from torch.utils.data import DataLoader
 from sentence_transformers import SentenceTransformer, InputExample, losses, evaluation
 from train_sbert import eval_sbert, get_train_examples_limited
@@ -20,7 +21,7 @@ id_column = 'sent_id'
 target_column = 'label'
 
 source_folder = 'results/low_data_similarity_folds'
-aux_path = '/Users/mariebexte/Coding/Datasets/PragTag/requestitem_export_09ebbebb-8b76-40c3-b2a5-03533ea6d7c0/auxiliary_data/F1000-22/data'
+aux_path = 'data/F1000-22/data'
 gw_lookup_path = 'data/gw_lookup.json'
 
 domains = ['case', 'diso', 'iscb', 'rpkg', 'scip']
@@ -130,21 +131,20 @@ def get_aux_data(domain):
 
 ########################
 
+# Take n with highest similiarity (for each label)
+train = False
+num_per_label = 10
+num_rounds = 3
+num_train = 1000
+condition_name = str(num_per_label) + '_per_label_' + str(num_rounds) + 'rounds_' + str (num_train)
+if train:
+    condition_name = condition_name + '_train'
+
 for fold in range (4):
 
     train_file = os.path.join(source_folder, 'fold_' + str(fold), 'train.csv')
     val_file = os.path.join(source_folder, 'fold_' + str(fold), 'predictions_sim.csv')
     model = SentenceTransformer(os.path.join(source_folder, 'fold_' + str(fold), 'finetuned_model'))
-
-    # Take n with highest similiarity (for each label)
-    train = False
-    num_per_label = 10
-    num_rounds = 3
-    num_train = 1000
-    condition_name = str(num_per_label) + '_per_label_' + str(num_rounds) + 'rounds_' + str (num_train)
-    if train:
-        condition_name = condition_name + '_train'
-    
 
     df_train = pd.read_csv(train_file)
     df_train['embedding'] = df_train[answer_column].apply(model.encode)
@@ -225,3 +225,27 @@ for fold in range (4):
         model.save(os.path.join(run_path, 'finetuned_model'))
     
     df_train.to_csv(os.path.join(run_path, 'ref.csv'))
+
+
+df_preds = pd.DataFrame()
+
+# Evaluate union of all splits
+for i in range(4):
+
+    # Predict on individual test data using ref
+    model = SentenceTransformer(os.path.join(source_folder, 'fold_' + str(i), 'finetuned_model'))
+    df_test = pd.read_csv(os.path.join(source_folder, 'fold_' + str(i), 'test.csv'))
+    df_ref = pd.read_csv(os.path.join(source_folder, condition_name, 'fold_' + str(i), 'ref.csv'))
+
+    df_ref['embedding'] = df_ref['sentence'].apply(model.encode)
+    df_test['embedding'] = df_test['sentence'].apply(model.encode)
+
+    df_preds_fold = eval_sbert(run_path='', df_test=df_test, df_ref=df_ref, id_column='sent_id', answer_column=answer_column, target_column='label', save=False)
+    df_preds = pd.concat([df_preds, df_preds_fold])
+
+evaluate_from_df(target_folder=os.path.join(source_folder, condition_name), df_pred=df_preds, suffix='overall')
+evaluate_from_df(target_folder=os.path.join(source_folder, condition_name), df_pred=df_preds[df_preds['domain'] == 'case'], suffix='case')
+evaluate_from_df(target_folder=os.path.join(source_folder, condition_name), df_pred=df_preds[df_preds['domain'] == 'diso'], suffix='diso')
+evaluate_from_df(target_folder=os.path.join(source_folder, condition_name), df_pred=df_preds[df_preds['domain'] == 'iscb'], suffix='iscb')
+evaluate_from_df(target_folder=os.path.join(source_folder, condition_name), df_pred=df_preds[df_preds['domain'] == 'rpkg'], suffix='rpkg')
+evaluate_from_df(target_folder=os.path.join(source_folder, condition_name), df_pred=df_preds[df_preds['domain'] == 'scip'], suffix='scip')

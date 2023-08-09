@@ -53,11 +53,14 @@ for i in range(num_folds):
 
         df_train = pd.concat([df_train, get_pids(domain_reviews, df_data)])
         df_test = pd.concat([df_test, get_pids(test_review, df_data)])
-        
+
     print(len(df_data))
     print(len(df_train))
     print(len(df_test))
     prompt = 'fold_' + str(i)
+
+    df_train.to_csv(os.path.join(target_folder, prompt, 'train.csv'))
+    df_test.to_csv(os.path.join(target_folder, prompt, 'test.csv'))
 
     if not os.path.exists(target_folder):
         os.mkdir(target_folder)

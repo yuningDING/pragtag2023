@@ -312,7 +312,7 @@ def train_and_eval_sbert(train_path, val_path, test_path, prompt, target_folder=
     prompt_ours = prompt + '_ours'
     prompt_test = prompt + '_test_data'
 
-    # train_sbert(run_path=target_folder + '/' + prompt_ours, df_train=df_train, df_test=df_val, df_val=df_val, answer_column="sentence", target_column="label", id_column="sent_id", base_model=model, num_pairs_per_example=None, save_model=True, num_epochs=epochs, batch_size=bs, do_warmup=True, respect_domains=respect_domains)
+    train_sbert(run_path=target_folder + '/' + prompt_ours, df_train=df_train, df_test=df_val, df_val=df_val, answer_column="sentence", target_column="label", id_column="sent_id", base_model=model, num_pairs_per_example=None, save_model=True, num_epochs=epochs, batch_size=bs, do_warmup=True, respect_domains=respect_domains)
     model = SentenceTransformer(os.path.join(target_folder, prompt_ours, 'finetuned_model'))
 
     df_train['embedding'] = df_train['sentence'].apply(model.encode)
