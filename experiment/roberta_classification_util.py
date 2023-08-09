@@ -1,7 +1,7 @@
 import gc
 import os
 import random
-
+import pandas as pd
 import numpy as np
 import torch
 from sklearn.metrics import (accuracy_score, f1_score, recall_score, confusion_matrix, cohen_kappa_score)
@@ -10,27 +10,72 @@ from tqdm import tqdm
 from transformers import RobertaTokenizer, RobertaModel, AutoConfig, AutoModel, BertTokenizer, BertModel, logging
 import string
 import re
+from sklearn.preprocessing import QuantileTransformer
 
 np.set_printoptions(threshold=10_000)
 logging.set_verbosity_error()
 
-KEEP_LIST = open("../data/keep_words.txt", "r", encoding='utf-8').read().split("\n")
+def get_json_from_dataframe(dataframe, directory):
+    grouped_labels = dataframe.groupby('id_x')['label'].apply(list).reset_index(name='labels')
+    grouped_texts = dataframe.groupby('id_x')['sentence'].apply(list).reset_index(name='sentences')
+    grouped_domains = dataframe.groupby('id_x')['domain'].apply(list).str[0].reset_index(name='domain')
+    grouped_dataframe = pd.merge(grouped_labels, grouped_texts, on=['id_x', 'id_x'])
+    grouped_dataframe = pd.merge(grouped_dataframe, grouped_domains, on=['id_x', 'id_x'])
+    #print(grouped_dataframe)
+    grouped_dataframe['id'] = grouped_dataframe['id_x']
+    out = grouped_dataframe.to_json(orient='records')
+    with open(directory, 'w') as f:
+        f.write(out)
+    return grouped_dataframe
 
 
-def get_terminology_replaced(dataframe):
-    #print(KEEP_LIST)
+DOMAINS = ['case', 'diso', 'iscb', 'rpkg', 'scip']
+
+def get_keep_list(domain):
+    keep_df = pd.read_csv("../data/keep_words_"+domain+".csv", encoding='utf-8')
+    return keep_df['word'].tolist()
+
+
+def get_terminology_replaced(dataframe, keep_list):
+    new_text_list = []
     for index, row in dataframe.iterrows():
         text = row['text']
         new_text = ''
         for t in text.split():
-            if t.lower().strip(string.punctuation) not in KEEP_LIST:
+            if t.lower().strip(string.punctuation) not in keep_list:
                 t = '<term>'
                 if 'http' in t:
                     t = '<link>'
                 elif re.search('[a-z]', t) is None:
                     t = '<non_letter>'
             new_text = new_text+' '+t
-        row['text'] = new_text.strip()
+        new_text_list.append(new_text.strip())
+    dataframe['text_replaced'] = new_text_list
+    return dataframe
+
+
+def replace_terminology(dataframe, is_test=False):
+    text_replaced = pd.DataFrame()
+    for d in DOMAINS:
+        keep_list = get_keep_list(d)
+        domain_df = dataframe.loc[dataframe['domain'] == d]
+        domain_df = domain_df[['sentence_id', 'text']]
+        domain_df = get_terminology_replaced(domain_df, keep_list)
+        #print("Before merge")
+        #print(domain_df)
+        #print(list(domain_df.columns.values))
+        domain_df = domain_df[['sentence_id', 'text_replaced']]
+        text_replaced = pd.concat([text_replaced, domain_df])
+        #print("After merge")
+        #print(out)
+        #print(list(out.columns.values))
+    #print(len(text_replaced))
+    if is_test:
+        domain_df = dataframe.loc[dataframe['domain'] == 'secret']
+        domain_df = domain_df[['sentence_id', 'text']]
+        domain_df['text_replaced'] = domain_df['text']
+        text_replaced = pd.concat([text_replaced, domain_df])
+    dataframe = dataframe.merge(text_replaced, on='sentence_id')
     return dataframe
 
 
@@ -310,8 +355,8 @@ def model_predict(device, model, test_loader, extra_data=None):
             if extra_data is None:
                 outputs = model(input_ids, attention_mask, token_type_ids)
             else:
-                extra_data = data['extra_data'].to(device, dtype=torch.long)
-                outputs = model(input_ids, extra_data, attention_mask)
+                extra_data_points = data['extra_data'].to(device, dtype=torch.long)
+                outputs = model(input_ids, extra_data_points, attention_mask)
             test_outputs.extend(torch.sigmoid(outputs).cpu().detach().numpy().tolist())
         test_outputs = np.argmax(test_outputs, axis=1)     
 
