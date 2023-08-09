@@ -11,9 +11,9 @@ To obtain the train-test split we used in our experiments, run `spit_full_data.p
 To look up gateway information for the auxiliary F1000Research data, first, execute `python3 data/extract_links.py` to crawl a list of the articles in the gateways of interest.
 Then run `python3 data/analyze_domains.py` to build the index of which of the reviews in the auxiliary data are associated with which of the gateways.
 
-The arr.json data is transformed from the original ARR data with the script in ./auxiliary_data/data_transformation.py, mapping [paper summary] to [Recap], [summary of strengths] to [Strength], [summary of weaknesses] to [Weakness] and [comments, suggestions and typos] to [Todo]. The arr_sampled.csv data is the sampled variant of arr.json according to the class distribution in the full-data.
+The `arr.json` data is transformed from the original ARR data with the script in `./auxiliary_data/data_transformation.py`, mapping [paper summary] to [Recap], [summary of strengths] to [Strength], [summary of weaknesses] to [Weakness] and [comments, suggestions and typos] to [Todo]. The `arr_sampled.csv` data is the sampled variant of `arr.json` according to the class distribution in the full-data.
 
-The keep_words_* data are used in + Word Normalization setting.
+The `keep_words_*` data are used in + Word Normalization setting.
 
 ### Experiments
 
