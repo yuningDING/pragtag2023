@@ -19,12 +19,14 @@ The keep_words_* data are used in + Word Normalization setting.
 
 #### 'Full-data' Setting
 
-Run run_full_data.sh
+Run `run_full_data.sh`
 
 #### 'Low Data' Setting
 
-To run the BERT-based model, run run_low_data.sh.
+To run the BERT-based model, run `run_low_data.sh`.
+
 To run the SBERT-based model, splitting the data once, execute `python3 experiment/low_data_similarity.py`.
+
 To train four separate models on different splits of the training data, run `python3 experiment/low_data_similarity_folds.py`.
 
 #### 'No Data' Setting
