@@ -1,0 +1,4 @@
+python3.8 roberta_classification_low_data_pipeline.py --train "../data/LOW_fold_0/train.csv" --validation "../data/LOW_fold_0/predictions_sim.csv" --output roberta_large_low_data_out/fold_0 --epochs 10
+python3.8 roberta_classification_low_data_pipeline.py --train "../data/LOW_fold_1/train.csv" --validation "../data/LOW_fold_1/predictions_sim.csv" --output roberta_large_low_data_out/fold_1 --epochs 10
+python3.8 roberta_classification_low_data_pipeline.py --train "../data/LOW_fold_2/train.csv" --validation "../data/LOW_fold_2/predictions_sim.csv" --output roberta_large_low_data_out/fold_2 --epochs 10
+python3.8 roberta_classification_low_data_pipeline.py --train "../data/LOW_fold_3/train.csv" --validation "../data/LOW_fold_3/predictions_sim.csv" --output roberta_large_low_data_out/fold_3 --epochs 10
