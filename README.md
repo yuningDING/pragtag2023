@@ -21,7 +21,9 @@ The `keep_words_*` data are used in + Word Normalization setting.
 
 Run `run_full_data.sh`
 
-#### 'Low Data' Setting
+To run the SBERT-based models run `python3 experiment/full_data_similarity_overall.py` for the cross-domain models and `python3 experiment/full_data_similarity_domains.py` to train one model per domain
+
+#### 'Low-Data' Setting
 
 To run the BERT-based model, run `run_low_data.sh`.
 
@@ -29,6 +31,10 @@ To run the SBERT-based model, splitting the data once, execute `python3 experime
 
 To train four separate models on different splits of the training data, run `python3 experiment/low_data_similarity_folds.py`.
 
-#### 'No Data' Setting
+#### 'No-Data' Setting
 
 For the SBERT-based experiments, run `python3 experiment/no_data_similarity.py` to obtain results for both our internal data split and predictions on the challenge test data.
+
+#### Majority Voting
+
+For the majority voting across multiple similarity-based models, run `python3 experiment/majority_voting_similarity.py`.
