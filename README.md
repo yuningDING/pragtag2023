@@ -6,7 +6,7 @@ This is the repository of our contribution to the 2023 PragTag challenge.
 
 Place the challenge data (including auxiliary data) in the `./data` folder.
 
-To obtain the train-test split we used in our experiments, run `spit_full_data.py`.
+To obtain the train-test split we used in our experiments, run `split_full_data.py`.
 
 To look up gateway information for the auxiliary F1000Research data, first, execute `python3 data/extract_links.py` to crawl a list of the articles in the gateways of interest.
 Then run `python3 data/analyze_domains.py` to build the index of which of the reviews in the auxiliary data are associated with which of the gateways.
@@ -34,6 +34,8 @@ To train four separate models on different splits of the training data, run `pyt
 #### 'No-Data' Setting
 
 For the SBERT-based experiments, run `python3 experiment/no_data_similarity.py` to obtain results for both our internal data split and predictions on the challenge test data.
+
+For the GPT experiment, you need to create a file with your openai credential under experiment/openai. Then run `run_no_data_chatgpt.sh`
 
 #### Majority Voting
 

@@ -9,7 +9,7 @@ openai.api_key_path = "openai"
 
 
 # read in json file
-validation = pd.read_json("../data/public_dat/validation.json")
+validation = pd.read_json("../data/our_split/validation.json")
 print(validation)
 validation_dummy = validation[['id']].copy()
 prompt_start = "Here are the definitions of different labels. Recap summarizes the manuscript: 'The paper proposes a new method for...' Strength points out the merits of the work: 'It is very well written and the contribution is significant.' Weakness points out a limitation: 'However, the data is not publicly available, making the work hard to reproduce' Todo suggests the ways a manuscript can be improved: 'Could the authors devise a standard procedure to obtain the data?' Other contains additional information, e.g. reviewer's thoughts, background knowledge and performative statements: 'Few examples from prior work: [1], [2], [3]', 'Once this is clarified, the paper can be accepted.' Structure is used to organize the reviewing report: 'Typos:' " \
